@@ -22,6 +22,51 @@
 
 // uncomment the below line to enable volume control with a potentiometer
 //#define POTI
+
+// NEO PIXEL - SECTION START =======================================================================================
+
+// uncomment the below line to enable NeoPixel LED ring
+#define LED_SR        // uncomment the below line to enable LED Strip and Ring support
+
+#ifdef LED_SR
+#include <Adafruit_NeoPixel.h>
+#define LED_PIN    8              // Der Pin am Arduino vom dem das Daten Signal rausgeht
+#define LED_COUNT 16              // Anzahl an LEDs im Ring oder Strip
+ 
+// Declare NeoPixel strip object:
+Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
+
+// Zählvarbiablen
+uint16_t loopCountdown;       // Runterzählen der Loops
+uint16_t lsrLoopCountWait;    // Definierte Anzahl wieviele Loops runtergezählt werden sollen, also wie lange gewartet wird
+uint8_t animationCountdown;   // Wie oft die einmalige Animation ausgeführt wird bevor es zurück in die Hauptschleife (Animationsmodus 0) geht
+uint8_t x;
+uint8_t y;
+uint8_t z;
+uint8_t i;
+int8_t dir_pulse;
+
+// Datenvarbiablen
+uint32_t lsrColorUp = strip.Color(0, 255, 0);   // Farbe wird bei Animation nächstes Lied verwendet
+uint32_t lsrColorDown = strip.Color(0, 0, 255); // Farbe wird bei Animation Lied zurück verwendet
+uint8_t currentDetectedVolume;                  // Speichern der aktuellen Lautstärke für späteren Vergleich
+uint8_t lastDetectedVolume;                     // Speichern der Lautstärke um die Animation nur ein mal zu triggern
+uint8_t volumeScope;                            // Differenz der von euch eingestellten minimalen und maximalen Lautstärke
+uint8_t volumeScopeAmount;                      // Lautstärkenwert in deinem Scope
+uint8_t currentDetectedTrack;                   // Speichern des aktuellen Tracks für späteren Vergleich
+uint8_t lastDetectedTrack;                      // Speichern des Tracks um die Animation nur ein mal zu triggern
+uint8_t lsrAnimationMode;                       // Animationsmodus - 0: Daueranimation, 1-2 einmalige Animation (als Unterbrechung zu 0)
+uint8_t lsrAnimationTrackMode;                  // Bei Animationsmodus Liedwechsel bestimmung der Farbe und Richtung
+uint32_t lsrHueCalc;                            // Zwischenspeicher einer Farbe
+uint32_t lsrColors;                             // Zwischenspeicher einer Farbe
+uint8_t lsrColorR[LED_COUNT];                   // Zwischenspeicher des Rot-Wertes für alle LEDs
+uint8_t lsrColorG[LED_COUNT];                   // Zwischenspeicher des Grün-Wertes für alle LEDs
+uint8_t lsrColorB[LED_COUNT];                   // Zwischenspeicher des Blau-Wertes für alle LEDs
+#endif
+
+
+// NEO PIXEL - SECTION END =========================================================================================
+
 static const uint32_t cardCookie = 322417479;
 
 // DFPlayer Mini
@@ -89,7 +134,7 @@ static uint16_t _lastTrackFinished;
 
 
 #ifdef POTI
-const byte POTIPIN      =7;
+const byte POTIPIN      = 7;
 uint16_t PotiValue;
 uint16_t oldPotiValue;
 #endif
@@ -758,6 +803,23 @@ void waitForTrackToFinish() {
 
 void setup() {
 
+// NEO PIXEL - SECTION START =======================================================================================
+
+  #ifdef LED_SR
+  strip.begin();
+  strip.setBrightness(30);
+  strip.show();
+
+  loopCountdown = 0;
+  animationCountdown = 0;
+  lastDetectedTrack = 0; 
+  lastDetectedVolume = volume;
+  lsrAnimationMode = 0;
+  dir_pulse = 0;   
+  #endif 
+
+// NEO PIXEL - SECTION END =========================================================================================
+
   Serial.begin(115200); // Es gibt ein paar Debug Ausgaben über die serielle Schnittstelle
   randomSeed(analogRead(A7)); // Zufallsgenerator initialisieren
 
@@ -1130,6 +1192,238 @@ void handleCardReader()
 
 void loop() {
 
+// NEO PIXEL - SECTION START =======================================================================================
+
+#ifdef LED_SR
+// LED Strip und Ring
+    
+///////////////// Prüfung der einmaligen Animationen /////////////////
+
+// ----------   Liedänderung erkennen und Animation aktivieren   ---------- //   
+currentDetectedTrack = currentTrack;
+if (currentDetectedTrack != lastDetectedTrack) 
+{
+  strip.clear();
+  if(currentTrack > lastDetectedTrack){ //nächstes Lied
+    lsrAnimationTrackMode = 1;
+    lsrColors = lsrColorUp;
+  }
+  if(currentTrack < lastDetectedTrack){ // Lied zurück
+    lsrAnimationTrackMode = 2;
+    lsrColors = lsrColorDown;
+  }
+  lsrAnimationMode = 1;
+  animationCountdown = strip.numPixels();
+  lsrLoopCountWait = 25; // Geschwindigkeit der Animation, desto größer desto langsamer
+  y = 0;
+}
+
+// ----------    Lautstärkenanpassung erkennen und Animation aktivieren    ---------- //  
+currentDetectedVolume = volume;
+if (currentDetectedVolume != lastDetectedVolume)
+{
+  lsrAnimationMode = 2;
+  animationCountdown = strip.numPixels();
+  lsrLoopCountWait = 1000;
+  y = 0;
+}
+
+///////////////// Dauerhafte Loop Animationen /////////////////
+
+// ----------   Loop Animation: Default Mode   ---------- //  
+if (lsrAnimationMode == 0 && loopCountdown == 0 && isPlaying() == false && knownCard == false)
+{
+  lsrLoopCountWait = 100; // Geschwindigkeit der Animation, desto größer desto langsamer
+
+  // Farbe & Animation definieren: Alle LEDs leuchten pulsierend von geringer Helligkeit zu hoher Helligkeit und zurück
+  // Richtung der Änderung festellen
+  if ( y >= 250 ) 
+  {
+    y = 250;
+    dir_pulse = -1;  // Runterzählen
+  }
+  if ( y <= 120 ) 
+  {
+    y = 120;
+    dir_pulse = 1;  // Hochzählen
+  }
+  y = y + dir_pulse;  
+
+  strip.fill(strip.gamma32(strip.ColorHSV( 50000, 255, y)), 0, 0);
+  strip.show();
+  loopCountdown = lsrLoopCountWait;
+}
+
+// ----------   Loop Animation: Musik spielt   ---------- // 
+if (lsrAnimationMode == 0 && loopCountdown == 0 && isPlaying() == true && knownCard == true)
+{
+  lsrLoopCountWait = 200; // Geschwindigkeit der Animation, desto größer desto langsamer
+
+  // Farbe & Animation definieren: Alle LEDs leuchten pulsierend von geringer Helligkeit zu hoher Helligkeit und zurück
+  // Richtung der Änderung festellen
+  if ( y >= 250 ) 
+  {
+    y = 250;
+    dir_pulse = -1;  // Runterzählen
+  }
+  if ( y <= 150 ) 
+  {
+    y = 150;
+    dir_pulse = 1;  // Hochzählen
+  }
+  y = y + dir_pulse;  
+  
+  strip.fill(strip.gamma32(strip.ColorHSV( 22000, 255, y)), 0, 0);
+  strip.show();
+  loopCountdown = lsrLoopCountWait;
+}
+
+// ----------   Loop Animation: Musik pausiert   ---------- //  
+if (lsrAnimationMode == 0 && loopCountdown == 0 && isPlaying() == false && knownCard == true)
+{
+  lsrLoopCountWait = 160; // Geschwindigkeit der Animation, desto größer desto langsamer
+
+  // Farbe & Animation definieren: Alle LEDs leuchten pulsierend von geringer Helligkeit zu hoher Helligkeit und zurück
+  // Richtung der Änderung festellen
+  if ( y >= 250 ) 
+  {
+    y = 250;
+    dir_pulse = -1;  // Runterzählen
+  }
+  if ( y <= 150 ) 
+  {
+    y = 150;
+    dir_pulse = 1;  // Hochzählen
+  }
+  y = y + dir_pulse;  
+  
+  strip.fill(strip.gamma32(strip.ColorHSV( 5000, 255, y)), 0, 0);
+  strip.show();
+  loopCountdown = lsrLoopCountWait;
+}
+
+///////////////// Einmalige Animationen bei einem Ereignis /////////////////
+
+// ----------   Einmalige Animation: Liedänderung    ---------- //
+if (lsrAnimationMode == 1 && loopCountdown == 0)
+{
+
+  // Fabre definieren: oben definiert
+  x=0;
+  do
+  {
+    for (i = 0; i < strip.numPixels(); i++)
+    {
+      lsrColorR[i] = (lsrColors >> 16 & 0xFF);
+      lsrColorG[i] = (lsrColors >> 8 & 0xFF);
+      lsrColorB[i] = (lsrColors & 0xFF);
+    }
+    x++;
+  } while (x < strip.numPixels());
+
+  // Animation definieren: oben definiert
+  
+  
+  if (y >= strip.numPixels()){ 
+      strip.clear();
+      y = 0; 
+    }
+
+
+  if(lsrAnimationTrackMode == 1){
+    z = y ;
+  }
+  if(lsrAnimationTrackMode == 2){
+    z = strip.numPixels() - y ;
+  }
+  
+  x=0;  
+  do
+  {
+    for (i = 0; i < y +1 ; i++)
+    {
+      strip.setPixelColor( z , lsrColorR[y], lsrColorG[y], lsrColorB[y]);
+    }
+  x++;
+  } while (x < y + 1);
+  
+  y++;
+
+  strip.show();
+
+  if (animationCountdown != 0){ animationCountdown--; }
+
+  if (animationCountdown == 0){
+    lsrAnimationMode = 0;
+  }
+  loopCountdown = lsrLoopCountWait ;
+}
+
+// ----------   Einmalige Animation: Prozentuale Lautstärkenanpassung   ---------- // 
+if (lsrAnimationMode == 2 && loopCountdown == 0)
+{
+  if (animationCountdown != 0)
+  {
+    animationCountdown--;
+  }
+
+  if (currentDetectedVolume != lastDetectedVolume)
+  {
+    lsrLoopCountWait = 5;
+  }
+
+  volumeScope = (mySettings.maxVolume - mySettings.minVolume);
+  volumeScopeAmount = (volume - mySettings.minVolume) * (LED_COUNT - 1) / volumeScope; // Lautstärkenanzeige angepasst an die Anzahl der LEDs
+
+  // Fabre definieren: von grün zu rot
+  x = 0;
+  do
+  {
+    for (i = 0; i < strip.numPixels(); i++)
+    {
+      lsrHueCalc = 21000 / (strip.numPixels() - 1) / (strip.numPixels() - 1);
+      lsrColors = strip.gamma32(strip.ColorHSV(((strip.numPixels() - 1) - i) * (strip.numPixels() - 1) * lsrHueCalc, 255, 250));
+      strip.setPixelColor(i, lsrColors);
+      lsrColorR[i] = (lsrColors >> 16 & 0xFF);
+      lsrColorG[i] = (lsrColors >> 8 & 0xFF);
+      lsrColorB[i] = (lsrColors & 0xFF);
+    }
+    x++;
+  } while (x < strip.numPixels());
+  // Animation definieren: Prozentuale Lautstärkenanpassung
+  strip.clear();
+  x = 0;
+  do
+  {
+    for (i = 0; i < volumeScopeAmount + 1; i++)
+    {
+      strip.setPixelColor(i, lsrColorR[i], lsrColorG[i], lsrColorB[i]);
+    }
+    x++;
+  } while (x < (volumeScopeAmount + 1));
+
+  strip.show();
+
+  if (animationCountdown == 0)
+  {
+    //delay(20);
+    lsrAnimationMode = 0;
+  }
+  loopCountdown = lsrLoopCountWait;
+}
+
+
+// ----------   Countdown Zähler über den loop als ersatz zur delay Funktion   ----------
+if (loopCountdown != 0 ){ loopCountdown--;}
+
+// ----------   Dadurch wird die Änderung der Lautstärke bzw. Track nur ein mal registiert   ----------
+lastDetectedVolume = currentDetectedVolume;
+lastDetectedTrack = currentDetectedTrack;
+
+#endif
+
+// NEO PIXEL - SECTION END =========================================================================================
+
     checkStandbyAtMillis();
     mp3.loop();
 
@@ -1273,10 +1567,12 @@ void loop() {
     }
 #endif
     // Ende der Buttons
+  
     #ifdef POTI
     potiVolume();
     #endif
-      handleCardReader();
+    handleCardReader();
+	
 }
 
 void onNewCard()
@@ -1298,6 +1594,14 @@ void onNewCard()
 }
 
 void adminMenu(bool fromCard = false) {
+// NEO PIXEL - SECTION START =======================================================================================
+  #ifdef LED_SR
+    // Show ADMIN-Menü via LEDs
+    strip.fill(strip.gamma32(strip.ColorHSV( 0, 255, 200)), 0, LED_COUNT/2);
+    strip.fill(strip.gamma32(strip.ColorHSV( 21485, 255, 200)), LED_COUNT/2, LED_COUNT/2);
+    strip.show();
+  #endif
+// NEO PIXEL - SECTION END =========================================================================================
   //Vergesse die vorherige Karte, wenn das Admin Menü betreten wird
   forgetLastCard=true;
   disablestandbyTimer();
