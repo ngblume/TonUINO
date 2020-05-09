@@ -771,6 +771,13 @@ void checkStandbyAtMillis() {
     Serial.println(F("=== power off!"));
     // enter sleep state
     digitalWrite(shutdownPin, HIGH);
+    // NEO PIXEL - SECTION START =======================================================================================
+    #ifdef LED_SR
+      // Switch off LEDs
+      strip.clear();
+      strip.show();
+    #endif
+// NEO PIXEL - SECTION END =========================================================================================
     delay(500);
 
     // http://discourse.voss.earth/t/intenso-s10000-powerbank-automatische-abschaltung-software-only/805
@@ -872,8 +879,7 @@ void setup() {
   // NFC Leser initialisieren
   SPI.begin();        // Init SPI bus
   mfrc522.PCD_Init(); // Init MFRC522
-  mfrc522
-  .PCD_DumpVersionToSerial(); // Show details of PCD - MFRC522 Card Reader
+  mfrc522.PCD_DumpVersionToSerial(); // Show details of PCD - MFRC522 Card Reader
   for (byte i = 0; i < 6; i++) {
     key.keyByte[i] = 0xFF;
   }
@@ -901,7 +907,7 @@ void setup() {
 
 
   // Start Shortcut "at Startup" - e.g. Welcome Sound
-  playShortCut(3);
+  // playShortCut(3);
 }
 
 void readButtons() {
@@ -987,7 +993,7 @@ void potiVolume() {
 }
 #endif
 void playFolder() {
-  Serial.println(F("== playFolder()")) ;
+  Serial.println(F("=== playFolder()")) ;
   disablestandbyTimer();
   randomSeed(millis() + random(1000));
   knownCard = true;
@@ -1103,7 +1109,7 @@ byte pollCard()
         Serial.print(F("Gleiche Karte"));
       }
       else {
-        Serial.print(F("Neue Karte"));
+        Serial.println(F("Neue Karte"));
       }
       // store info about current card
       memcpy(lastCardUid, mfrc522.uid.uidByte, 4);
