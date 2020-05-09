@@ -27,41 +27,41 @@
 
 // uncomment the below line to enable NeoPixel LED ring
 #define LED_SR        // uncomment the below line to enable LED Strip and Ring support
-
 #ifdef LED_SR
-#include <Adafruit_NeoPixel.h>
-#define LED_PIN    8              // Der Pin am Arduino vom dem das Daten Signal rausgeht
-#define LED_COUNT 16              // Anzahl an LEDs im Ring oder Strip
- 
-// Declare NeoPixel strip object:
-Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
-
-// Zählvarbiablen
-uint16_t loopCountdown;       // Runterzählen der Loops
-uint16_t lsrLoopCountWait;    // Definierte Anzahl wieviele Loops runtergezählt werden sollen, also wie lange gewartet wird
-uint8_t animationCountdown;   // Wie oft die einmalige Animation ausgeführt wird bevor es zurück in die Hauptschleife (Animationsmodus 0) geht
-uint8_t x;
-uint8_t y;
-uint8_t z;
-uint8_t i;
-int8_t dir_pulse;
-
-// Datenvarbiablen
-uint32_t lsrColorUp = strip.Color(0, 255, 0);   // Farbe wird bei Animation nächstes Lied verwendet
-uint32_t lsrColorDown = strip.Color(0, 0, 255); // Farbe wird bei Animation Lied zurück verwendet
-uint8_t currentDetectedVolume;                  // Speichern der aktuellen Lautstärke für späteren Vergleich
-uint8_t lastDetectedVolume;                     // Speichern der Lautstärke um die Animation nur ein mal zu triggern
-uint8_t volumeScope;                            // Differenz der von euch eingestellten minimalen und maximalen Lautstärke
-uint8_t volumeScopeAmount;                      // Lautstärkenwert in deinem Scope
-uint8_t currentDetectedTrack;                   // Speichern des aktuellen Tracks für späteren Vergleich
-uint8_t lastDetectedTrack;                      // Speichern des Tracks um die Animation nur ein mal zu triggern
-uint8_t lsrAnimationMode;                       // Animationsmodus - 0: Daueranimation, 1-2 einmalige Animation (als Unterbrechung zu 0)
-uint8_t lsrAnimationTrackMode;                  // Bei Animationsmodus Liedwechsel bestimmung der Farbe und Richtung
-uint32_t lsrHueCalc;                            // Zwischenspeicher einer Farbe
-uint32_t lsrColors;                             // Zwischenspeicher einer Farbe
-uint8_t lsrColorR[LED_COUNT];                   // Zwischenspeicher des Rot-Wertes für alle LEDs
-uint8_t lsrColorG[LED_COUNT];                   // Zwischenspeicher des Grün-Wertes für alle LEDs
-uint8_t lsrColorB[LED_COUNT];                   // Zwischenspeicher des Blau-Wertes für alle LEDs
+  #include <Adafruit_NeoPixel.h>
+  #define LED_PIN    8              // Der Pin am Arduino vom dem das Daten Signal rausgeht
+  #define LED_COUNT  24             // Anzahl an LEDs im Ring oder Strip
+   
+  // Declare NeoPixel strip object:
+  
+  Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
+  
+  // Zählvarbiablen
+  uint16_t loopCountdown;       // Runterzählen der Loops
+  uint16_t lsrLoopCountWait;    // Definierte Anzahl wieviele Loops runtergezählt werden sollen, also wie lange gewartet wird
+  uint8_t animationCountdown;   // Wie oft die einmalige Animation ausgeführt wird bevor es zurück in die Hauptschleife (Animationsmodus 0) geht
+  uint8_t x;
+  uint8_t y;
+  uint8_t z;
+  uint8_t i;
+  int8_t dir_pulse;
+  
+  // Datenvarbiablen
+  uint32_t lsrColorUp = strip.Color(0, 255, 0);   // Farbe wird bei Animation nächstes Lied verwendet
+  uint32_t lsrColorDown = strip.Color(0, 0, 255); // Farbe wird bei Animation Lied zurück verwendet
+  uint8_t currentDetectedVolume;                  // Speichern der aktuellen Lautstärke für späteren Vergleich
+  uint8_t lastDetectedVolume;                     // Speichern der Lautstärke um die Animation nur ein mal zu triggern
+  uint8_t volumeScope;                            // Differenz der von euch eingestellten minimalen und maximalen Lautstärke
+  uint8_t volumeScopeAmount;                      // Lautstärkenwert in deinem Scope
+  uint8_t currentDetectedTrack;                   // Speichern des aktuellen Tracks für späteren Vergleich
+  uint8_t lastDetectedTrack;                      // Speichern des Tracks um die Animation nur ein mal zu triggern
+  uint8_t lsrAnimationMode;                       // Animationsmodus - 0: Daueranimation, 1-2 einmalige Animation (als Unterbrechung zu 0)
+  uint8_t lsrAnimationTrackMode;                  // Bei Animationsmodus Liedwechsel bestimmung der Farbe und Richtung
+  uint32_t lsrHueCalc;                            // Zwischenspeicher einer Farbe
+  uint32_t lsrColors;                             // Zwischenspeicher einer Farbe
+  uint8_t lsrColorR[LED_COUNT];                   // Zwischenspeicher des Rot-Wertes für alle LEDs
+  uint8_t lsrColorG[LED_COUNT];                   // Zwischenspeicher des Grün-Wertes für alle LEDs
+  uint8_t lsrColorB[LED_COUNT];                   // Zwischenspeicher des Blau-Wertes für alle LEDs
 #endif
 
 
@@ -807,6 +807,7 @@ void setup() {
 
   #ifdef LED_SR
   strip.begin();
+  strip.clear();
   strip.setBrightness(30);
   strip.show();
 
@@ -831,6 +832,10 @@ void setup() {
   Serial.println(F("TonUINO Version 2.1 + mods by McGreg"));
   Serial.println(F("created by Thorsten Voß and licensed under GNU/GPL."));
   Serial.println(F("Information and contribution at https://tonuino.de.\n"));
+  Serial.println(F("Number of NeoPixel in ring: "));
+  Serial.println(LED_COUNT);
+  Serial.println(F("\n"));
+  
 
   // Busy Pin
   pinMode(busyPin, INPUT);
@@ -876,10 +881,10 @@ void setup() {
   pinMode(buttonPause, INPUT_PULLUP);
   pinMode(buttonUp, INPUT_PULLUP);
   pinMode(buttonDown, INPUT_PULLUP);
-#ifdef FIVEBUTTONS
-  pinMode(buttonFourPin, INPUT_PULLUP);
-  pinMode(buttonFivePin, INPUT_PULLUP);
-#endif
+  #ifdef FIVEBUTTONS
+    pinMode(buttonFourPin, INPUT_PULLUP);
+    pinMode(buttonFivePin, INPUT_PULLUP);
+  #endif
   pinMode(shutdownPin, OUTPUT);
   digitalWrite(shutdownPin, LOW);
 
@@ -903,27 +908,27 @@ void readButtons() {
   pauseButton.read();
   upButton.read();
   downButton.read();
-#ifdef FIVEBUTTONS
-  buttonFour.read();
-  buttonFive.read();
-#endif
+  #ifdef FIVEBUTTONS
+    buttonFour.read();
+    buttonFive.read();
+  #endif
 }
 
 void volumeUpButton() {
   #ifndef POTI
-  if (activeModifier != NULL)
-    if (activeModifier->handleVolumeUp() == true)
-      return;
-
-  Serial.println(F("=== volumeUp()"));
-  if (volume < mySettings.maxVolume) {
-    mp3.increaseVolume();
-    volume++;
-  }
-  Serial.println(volume);
+    if (activeModifier != NULL)
+      if (activeModifier->handleVolumeUp() == true)
+        return;
+  
+    Serial.println(F("=== volumeUp()"));
+    if (volume < mySettings.maxVolume) {
+      mp3.increaseVolume();
+      volume++;
+    }
+    Serial.println(volume);
   #endif
   #ifdef POTI
-nextButton();
+    nextButton();
   #endif
 }
 
@@ -1214,7 +1219,7 @@ if (currentDetectedTrack != lastDetectedTrack)
   }
   lsrAnimationMode = 1;
   animationCountdown = strip.numPixels();
-  lsrLoopCountWait = 25; // Geschwindigkeit der Animation, desto größer desto langsamer
+  lsrLoopCountWait = 100; // Geschwindigkeit der Animation, desto größer desto langsamer
   y = 0;
 }
 
@@ -1224,7 +1229,7 @@ if (currentDetectedVolume != lastDetectedVolume)
 {
   lsrAnimationMode = 2;
   animationCountdown = strip.numPixels();
-  lsrLoopCountWait = 1000;
+  lsrLoopCountWait = 500;
   y = 0;
 }
 
@@ -1233,7 +1238,7 @@ if (currentDetectedVolume != lastDetectedVolume)
 // ----------   Loop Animation: Default Mode   ---------- //  
 if (lsrAnimationMode == 0 && loopCountdown == 0 && isPlaying() == false && knownCard == false)
 {
-  lsrLoopCountWait = 100; // Geschwindigkeit der Animation, desto größer desto langsamer
+  lsrLoopCountWait = 25; // Geschwindigkeit der Animation, desto größer desto langsamer
 
   // Farbe & Animation definieren: Alle LEDs leuchten pulsierend von geringer Helligkeit zu hoher Helligkeit und zurück
   // Richtung der Änderung festellen
@@ -1257,7 +1262,7 @@ if (lsrAnimationMode == 0 && loopCountdown == 0 && isPlaying() == false && known
 // ----------   Loop Animation: Musik spielt   ---------- // 
 if (lsrAnimationMode == 0 && loopCountdown == 0 && isPlaying() == true && knownCard == true)
 {
-  lsrLoopCountWait = 200; // Geschwindigkeit der Animation, desto größer desto langsamer
+  lsrLoopCountWait = 400; // Geschwindigkeit der Animation, desto größer desto langsamer
 
   // Farbe & Animation definieren: Alle LEDs leuchten pulsierend von geringer Helligkeit zu hoher Helligkeit und zurück
   // Richtung der Änderung festellen
@@ -1266,9 +1271,9 @@ if (lsrAnimationMode == 0 && loopCountdown == 0 && isPlaying() == true && knownC
     y = 250;
     dir_pulse = -1;  // Runterzählen
   }
-  if ( y <= 150 ) 
+  if ( y <= 180 ) 
   {
-    y = 150;
+    y = 180;
     dir_pulse = 1;  // Hochzählen
   }
   y = y + dir_pulse;  
@@ -1281,7 +1286,7 @@ if (lsrAnimationMode == 0 && loopCountdown == 0 && isPlaying() == true && knownC
 // ----------   Loop Animation: Musik pausiert   ---------- //  
 if (lsrAnimationMode == 0 && loopCountdown == 0 && isPlaying() == false && knownCard == true)
 {
-  lsrLoopCountWait = 160; // Geschwindigkeit der Animation, desto größer desto langsamer
+  lsrLoopCountWait = 70; // Geschwindigkeit der Animation, desto größer desto langsamer
 
   // Farbe & Animation definieren: Alle LEDs leuchten pulsierend von geringer Helligkeit zu hoher Helligkeit und zurück
   // Richtung der Änderung festellen
