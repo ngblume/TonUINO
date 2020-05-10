@@ -769,8 +769,7 @@ void disablestandbyTimer() {
 void checkStandbyAtMillis() {
   if (sleepAtMillis != 0 && millis() > sleepAtMillis) {
     Serial.println(F("=== power off!"));
-    // enter sleep state
-    digitalWrite(shutdownPin, HIGH);
+    
     // NEO PIXEL - SECTION START =======================================================================================
     #ifdef LED_SR
       // Switch off LEDs
@@ -778,6 +777,9 @@ void checkStandbyAtMillis() {
       strip.show();
     #endif
 // NEO PIXEL - SECTION END =========================================================================================
+    delay(1000);
+    // activate external sleep state
+    digitalWrite(shutdownPin, HIGH);
     delay(500);
 
     // http://discourse.voss.earth/t/intenso-s10000-powerbank-automatische-abschaltung-software-only/805
@@ -1106,7 +1108,7 @@ byte pollCard()
         {
       bool bSameUID = !memcmp(lastCardUid, mfrc522.uid.uidByte, 4);
       if (bSameUID) {
-        Serial.print(F("Gleiche Karte"));
+        Serial.println(F("Gleiche Karte"));
       }
       else {
         Serial.println(F("Neue Karte"));
@@ -1123,7 +1125,7 @@ byte pollCard()
           {
             mfrc522.PICC_HaltA();
             mfrc522.PCD_StopCrypto1();
-            Serial.print(F("Karte konnte nicht gelesen werden"));
+            Serial.println(F("Karte konnte nicht gelesen werden"));
     }
     }
     }
@@ -1763,7 +1765,7 @@ void adminMenu(bool fromCard = false) {
     for (uint8_t x = special; x <= special2; x++) {
       mp3.playMp3FolderTrack(x);
       tempCard.nfcFolderSettings.special = x;
-      Serial.print(x);
+      Serial.println(x);
       Serial.println(F(" Karte auflegen"));
       do {
         readButtons();
